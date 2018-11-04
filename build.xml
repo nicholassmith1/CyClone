@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="CyClone" basedir="." default="main">
+
+	<property name="src.dir"     value="src"/>
+	<property name="build.dir"   value="build"/>
+	<property name="classes.dir" value="${build.dir}/classes"/>
+	<property name="jar.dir"     value="dist"/>
+	<property name="lib"  value="lib"/>
+	<property name="dist.dir" value="dist"/>
+
+	<target name="clean">
+		<delete dir="${build.dir}"/>
+		<delete dir="${jar.dir}"/>
+	</target>
+	
+	<target name="compile_spi">
+		<mkdir dir="${classes.dir}" />
+		<mkdir dir="${jar.dir}" />
+		<javac encoding="utf-8" source="1.8" target="1.8"
+				debug="true" includeantruntime="false"
+				sourcepath="" srcdir="${src.dir}" 
+				destdir="${classes.dir}">
+			<include name="cyclone/core/spi/*.java" />
+			<classpath>
+				<fileset dir="${lib}">
+					<include name="**/*.jar" />
+				</fileset>
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="jar_spi" depends="compile_spi">
+		<mkdir dir="${jar.dir}"/>
+		<jar destfile="${jar.dir}/CyCloneSPI.jar" basedir="${classes.dir}">
+		</jar>
+	</target>
+	
+	<target name="compile_cli">
+		<mkdir dir="${classes.dir}" />
+		<mkdir dir="${jar.dir}" />
+		<javac encoding="utf-8" source="1.8" target="1.8"
+				debug="true" includeantruntime="false"
+				sourcepath="" srcdir="${src.dir}" 
+				destdir="${classes.dir}">
+			<include name="cyclone/core/spi/*.java" />
+			<include name="cyclone/core/cloneDetector/*.java" />
+			<include name="cyclone/cli/*.java" />
+			<classpath>
+				<fileset dir="${lib}">
+					<include name="**/*.jar" />
+				</fileset>
+			</classpath>
+		</javac>
+	</target>
+	
+	<target name="jar_cli" depends="compile_cli">
+		<mkdir dir="${jar.dir}"/>
+		<jar destfile="${jar.dir}/CyClone.jar" basedir="${classes.dir}">
+			<zipgroupfileset dir="${lib}" includes="**/*.jar" />
+			<manifest>
+				<attribute name="Main-Class" value="cyclone.cli.CyClone"/>
+			</manifest>
+		</jar>
+	</target>
+	
+
+</project>
