@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.Consumer;
+import javax.swing.AbstractAction;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 import org.apache.commons.io.FileUtils;
@@ -33,6 +36,7 @@ import org.openide.util.Exceptions;
 import org.openide.windows.TopComponent;
 //import org.netbeans.api.project.Project
 import org.openide.util.Lookup;
+import org.openide.util.actions.Presenter;
 import org.openide.windows.Mode;
 import org.openide.windows.WindowManager;
 //import org.openide.util.ui;
@@ -44,19 +48,39 @@ import org.openide.windows.WindowManager;
         id = "edu.brown.cyclone.FindClonesAction"
 )
 @ActionRegistration(
-        displayName = "#CTL_FindClonesAction"
+        displayName = "#CTL_FindClonesAction",
+        lazy = false
 )
 @ActionReferences({
     @ActionReference(path = "Menu/Source", position = 200),
     @ActionReference(path = "Editors/Popup", position = 4000, separatorBefore = 3950, separatorAfter = 4050)
 })
 @Messages("CTL_FindClonesAction=Find Clones")
-public final class FindClonesAction implements ActionListener {
-
-    
+public final class FindClonesAction extends AbstractAction implements ActionListener, Presenter.Popup {
+   
     @Override
     public void actionPerformed(ActionEvent e) {
-        Project[] projects = FindClonesUtil.getOpenProjects();
-        FindClonesUtil.startSearch(projects);
+        /* NOP */
+    }
+
+    @Override
+    public JMenuItem getPopupPresenter() {
+        /* FIXME - this looks distinctly not 'Netbean-ish' */
+        JMenu menu = new JMenu("Find Clones");
+        menu.add(new JMenuItem(new AbstractAction("Project") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Project[] projects = FindClonesUtil.getCurrentProject();
+                FindClonesUtil.startSearch(projects);
+            }
+        }));
+        menu.add(new JMenuItem(new AbstractAction("WorkSpace") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Project[] projects = FindClonesUtil.getOpenProjects();
+                FindClonesUtil.startSearch(projects);
+            }
+        }));
+        return menu;
     }
 }

@@ -17,6 +17,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 import org.apache.commons.io.FileUtils;
 import org.netbeans.api.editor.EditorRegistry;
+import org.netbeans.api.project.FileOwnerQuery;
 import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ProjectUtils;
 import org.netbeans.api.project.SourceGroup;
@@ -24,7 +25,10 @@ import org.netbeans.api.project.Sources;
 import static org.netbeans.api.project.Sources.TYPE_GENERIC;
 import org.netbeans.api.project.ui.OpenProjects;
 import org.openide.filesystems.FileObject;
+import org.openide.loaders.DataObject;
+import org.openide.nodes.Node;
 import org.openide.util.Lookup;
+import org.openide.util.Utilities;
 import org.openide.windows.Mode;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
@@ -41,8 +45,24 @@ public class FindClonesUtil {
     public static Project[] getCurrentProject() {
         Project[] projects = new Project[1];
         
-        OpenProjects op = OpenProjects.getDefault();
-        projects[0] = op.getMainProject();
+        /* Apparently this is wrong. See http://netbeans-org.1045718.n5.nabble.com/unable-to-look-up-current-project-td5748054.html */
+//        OpenProjects op = OpenProjects.getDefault();
+//        projects[0] = op.getMainProject();
+
+        Lookup context = Utilities.actionsGlobalContext();
+        projects[0] = context.lookup(Project.class);
+        
+        if (projects[0] == null) {
+            Node node = context.lookup(Node.class);
+            if (node != null) {
+                    DataObject dataObject = node.getLookup().lookup(DataObject.class);
+                    if (dataObject == null) {
+                            return null;
+                    }
+                    FileObject fileObject = dataObject.getPrimaryFile();
+                    projects[0] = FileOwnerQuery.getOwner(fileObject);
+            }
+        } 
         
         return projects;
     }

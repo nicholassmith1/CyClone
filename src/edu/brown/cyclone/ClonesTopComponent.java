@@ -178,6 +178,7 @@ public final class ClonesTopComponent extends TopComponent
     public void clearClones() {
         System.out.println("Clear clones");
         top.removeAllChildren();
+        model.reload(top);
     }
     
     public void addClone(String strategy, String file, int startLine,
