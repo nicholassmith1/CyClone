@@ -128,17 +128,44 @@ public final class FindClonesAction implements ActionListener {
         
         // TODO - clear any previous results
         
+                //Locate the Output Window instance                
+        final String OUTPUT_ID = "output";
+        TopComponent outputWindow = WindowManager.getDefault().findTopComponent(OUTPUT_ID);
+        
+        TopComponent cloneWindow1 = WindowManager.getDefault().findTopComponent("ClonesTopComponent");
+        
+        System.out.println("++++ " + outputWindow);
+        System.out.println("++++ " + cloneWindow1);
+        
+        final ClonesTopComponent clone;
+        if (cloneWindow1 != null && cloneWindow1.isOpened()) {
+            clone = (ClonesTopComponent)cloneWindow1;
+            
+            clone.clearClones();
+            
+            
+        } else {
+            clone = null;
+        }
         
         CloneListener listener = new CloneListener() {
             @Override
             public void notifyCloneDetected(CloneSearch search, String clone_file, long start_line, long end_line, double confidence, String strategy, long time) {
                 System.out.println("-- FOUND CLONE " + clone_file + " " + start_line + " " + end_line);
+                clone.addClone(strategy, clone_file, (int)start_line,
+                        (int)end_line, confidence);
             }
             
         };
         
         cloneDetector.getClones(fileName, lineStart, lineEnd,
                 source_files, listener);
+        
+
+        
+//        Lookup.
+//        ClonesTopComponent cp = Lookup.getDefault().lookup(ClonesTopComponent.class);
+//        cp.removeAll();
     }
     
     /*
