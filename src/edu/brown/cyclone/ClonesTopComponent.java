@@ -5,12 +5,14 @@
  */
 package edu.brown.cyclone;
 
+import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.Enumeration;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
@@ -52,7 +54,6 @@ import org.openide.text.Line;
     "HINT_ClonesTopComponent=This is a Clones window"
 })
 public final class ClonesTopComponent extends TopComponent
-//        implements LookupListener
 {
 
     private DefaultTreeModel model;
@@ -79,6 +80,13 @@ public final class ClonesTopComponent extends TopComponent
             return file + ":" + startLine + "," + endLine + " -- " + confidence;
         }
     }
+    
+    /*
+    probably handle showing the selected line with this:
+    http://wiki.netbeans.org/DevFaqOpenFileAtLine
+    http://bits.netbeans.org/8.2/javadoc/org-openide-text/org/openide/text/class-use/Line.ShowVisibilityType.html
+    https://stackoverflow.com/questions/22408229/netbeans-plugin-open-file-at-specific-line-and-column/22421536#22421536
+    */
         
     protected class CloneMouseListener extends MouseAdapter {
         
@@ -130,6 +138,16 @@ public final class ClonesTopComponent extends TopComponent
         }
     }
     
+    protected class NoSelectionRenderer extends DefaultTreeCellRenderer {
+        @Override
+        public Component getTreeCellRendererComponent(JTree tree, Object value,
+                boolean sel, boolean exp, boolean leaf, int row,
+                boolean hasFocus) {
+            return super.getTreeCellRendererComponent(tree, value, false,
+                    exp, leaf, row, false);
+        }
+    }
+    
     public ClonesTopComponent() {
         initComponents();
         setName(Bundle.CTL_ClonesTopComponent());
@@ -138,7 +156,9 @@ public final class ClonesTopComponent extends TopComponent
         top = new DefaultMutableTreeNode("Code Clones");
         model = new DefaultTreeModel(top);
         
+        jTree1.setCellRenderer(new NoSelectionRenderer());
         jTree1.setModel(model);
+        jTree1.setRootVisible(false);
         jTree1.addMouseListener(new CloneMouseListener());
     }
     
