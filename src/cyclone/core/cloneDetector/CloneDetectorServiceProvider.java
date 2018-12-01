@@ -25,6 +25,13 @@ public class CloneDetectorServiceProvider {
 		
 		return instance;
 	}
+        
+        /* TODO - have the service providers supply this. */
+        public String[] getSupportedExtensions() {
+            String[] supported =  { "java", "c" };
+            
+            return supported;
+        }
 	
 	public CloneSearch getClones(String target_file, long start_line,
 			long end_line, Collection<String> source_files,

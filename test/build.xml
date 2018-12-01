@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   <target name="compile"  description="Compile TestCC">
     <mkdir dir="build" />
-    <javac srcdir="src"
+    <javac source="1.8" target="1.8" srcdir="src"
          includeantruntime="true"
          destdir="build"
          fork="yes"
