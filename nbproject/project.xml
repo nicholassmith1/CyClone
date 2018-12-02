@@ -132,6 +132,10 @@
                 <runtime-relative-path>ext/TestCC.jar</runtime-relative-path>
                 <binary-origin>release/modules/ext/TestCC.jar</binary-origin>
             </class-path-extension>
+            <class-path-extension>
+                <runtime-relative-path>ext/sourcerercc.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/sourcerercc.jar</binary-origin>
+            </class-path-extension>
         </data>
     </configuration>
 </project>

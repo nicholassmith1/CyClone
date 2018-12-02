@@ -7,6 +7,7 @@ import java.util.ServiceLoader;
 import cyclone.core.spi.CloneDetectorService;
 import cyclone.core.spi.CloneListener;
 import cyclone.core.spi.CloneSearch;
+import cyclone.core.spi.CloneSearchStatusListener;
 
 public class CloneDetectorServiceProvider {
 	
@@ -35,7 +36,8 @@ public class CloneDetectorServiceProvider {
 	
 	public CloneSearch getClones(String target_file, long start_line,
 			long end_line, Collection<String> source_files,
-			CloneListener listener) {
+			CloneListener listener,
+			CloneSearchStatusListener statusListener) {
 		CloneSearch search;
 		
 		search = new CloneSearch(id++, target_file,
@@ -45,8 +47,7 @@ public class CloneDetectorServiceProvider {
             Iterator<CloneDetectorService> detectors = loader.iterator();
             while (detectors != null && detectors.hasNext()) {
                 CloneDetectorService d = detectors.next();
-                System.out.println(">>>>" + d);
-                d.search(search, listener);
+                d.search(search, listener, statusListener);
             }
         } catch (ServiceConfigurationError serviceError) {
             serviceError.printStackTrace();

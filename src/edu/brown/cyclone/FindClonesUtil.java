@@ -8,6 +8,7 @@ package edu.brown.cyclone;
 import cyclone.core.cloneDetector.CloneDetectorServiceProvider;
 import cyclone.core.spi.CloneListener;
 import cyclone.core.spi.CloneSearch;
+import cyclone.core.spi.CloneSearchStatusListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -97,6 +98,9 @@ public class FindClonesUtil {
         provider = getEditor(null);
         FileObject fileObject = provider.getLookup().lookup(FileObject.class);
         String fileName = fileObject.getPath();
+        /* steralize the target file. Always work in absolutes */
+        fileName = new File(fileName).toPath().
+                toAbsolutePath().normalize().toString();
         
 //        /* debug */
 //        String s = lastFocused.getSelectedText();
@@ -164,11 +168,17 @@ public class FindClonesUtil {
                 clone.addClone(strategy, clone_file, (int)start_line,
                         (int)end_line, confidence);
             }
-            
+        };
+        
+        CloneSearchStatusListener statusListener = new CloneSearchStatusListener() {
+            @Override
+            public void notifyComplete(CloneSearch spec) {
+                /* TODO ??? */
+            }
         };
         
         CloneSearch cs = cloneDetector.getClones(fileName, lineStart, lineEnd,
-                source_files, listener);
+                source_files, listener, statusListener);
         PENDING_SEARCHES.add(cs);
     }
     

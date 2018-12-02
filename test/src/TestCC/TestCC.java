@@ -1,12 +1,14 @@
 
 package TestCC;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 import java.io.*;
 import cyclone.core.spi.CloneDetectorService;
 import cyclone.core.spi.CloneListener;
 import cyclone.core.spi.CloneSearch;
+import cyclone.core.spi.CloneSearchStatusListener;
 
 public class TestCC  implements CloneDetectorService {
 	
@@ -77,13 +79,51 @@ public class TestCC  implements CloneDetectorService {
 					"RANDOM_STRATEGY", search_time);
 		}
 	}
-
-	public void search(CloneSearch spec, CloneListener listener) {
-		Random rand = new Random(System.currentTimeMillis());
+	
+	public String[] getSupportedExtensions() {
+		final String[] supportedExtensions = { "c", "cpp", "java", "python", "xml", "h", "hpp" };
 		
-		for (int i = 0; i < rand.nextInt(MAX_CLONES_DISCOVERED); i++) {
-			new Thread(new FakeCloneDetector(spec, listener, i)).start();
+		return supportedExtensions;
+	}
+	
+	private class SearchEmulator implements Runnable {
+		private CloneSearch spec;
+		private CloneListener listener;
+		private CloneSearchStatusListener statusListener;
+		
+		public SearchEmulator(CloneSearch spec, CloneListener listener,
+				CloneSearchStatusListener statusListener) {
+			this.spec = spec;
+			this.listener = listener;
+			this.statusListener = statusListener;
 		}
+		
+		@Override
+		public void run() {
+			Random rand = new Random(System.currentTimeMillis());
+			ArrayList<Thread> threads = new ArrayList<>();
+			
+			
+			for (int i = 0; i < rand.nextInt(MAX_CLONES_DISCOVERED); i++) {
+				Thread t = new Thread(new FakeCloneDetector(spec, listener, i));
+				threads.add(t);
+				t.start();
+			}
+			for (Thread t : threads) {
+				try {
+					t.join();
+				} catch (Exception e) {
+					;
+				}
+			}
+			
+			statusListener.notifyComplete(spec);
+		}
+	}
+
+	public void search(CloneSearch spec, CloneListener listener,
+			CloneSearchStatusListener statusListener) {
+		new Thread(new SearchEmulator(spec, listener, statusListener)).start();
 	}
 	
 	public void cancel(CloneSearch spec) {

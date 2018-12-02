@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 import cyclone.core.cloneDetector.CloneDetectorServiceProvider;
 import cyclone.core.spi.CloneListener;
 import cyclone.core.spi.CloneSearch;
+import cyclone.core.spi.CloneSearchStatusListener;
 
 //import org.apache.commons.io.FileUtils;
 
@@ -26,6 +27,11 @@ import picocli.CommandLine.Parameters;
 
 public class CyClone implements Callable<Void> {
 
+	// https://github.com/clonebench/BigCloneBench seems broken, but leads to
+	// https://jeffsvajlenko.weebly.com/bigcloneeval.html, which leads to
+	// https://www.dropbox.com/s/z2k8r78l63r68os/BigCloneBench_BCEvalVersion.tar.gz?dl=0
+	// 
+	
 //    @Parameters(index = "0", description = "The file whose checksum to calculate.")
 //    private File file;
 
@@ -56,7 +62,6 @@ public class CyClone implements Callable<Void> {
     	LOGGER.setLevel(Level.OFF);
     }
     
-
     public static void main(String[] args) throws Exception {
         CommandLine.call(new CyClone(), args);
     }
@@ -88,7 +93,7 @@ public class CyClone implements Callable<Void> {
 			}
 			
 			/* Marked as visited */
-			visited.add(file.toString());
+			visited.add(file.toAbsolutePath().normalize().toString());
 			
 			/* Add partial index of all interesting files to the working directory */
 			LOGGER.fine("generating partial index for "
@@ -113,17 +118,20 @@ public class CyClone implements Callable<Void> {
     		throw new Exception("not supported");
 		}
     	
+    	/* Sterilize path, always work in absolutes */
+    	t_file = new File(t_file).toPath().toAbsolutePath().normalize().toString();
+    	
     	LOGGER.fine("Searching for " + t_file + " start="
     			+ t_start + " end=" + t_end + ":");
 
 		StringBuffer buffer = new StringBuffer();	
 		
 		try (Stream<String> lines = Files.lines(Paths.get(t_file))) {
-			t_start = Integer.max(t_start - 1, 0);
+			int first_line = Integer.max(t_start - 1, 0);
 		    
-		    Iterator<String> iter = lines.skip(t_start).iterator();
+		    Iterator<String> iter = lines.skip(first_line).iterator();
 		    String line;
-		    for (int i = t_start; i < t_end && iter.hasNext(); i++) {
+		    for (int i = first_line; i < t_end && iter.hasNext(); i++) {
 		    	line = iter.next();
 			    buffer.append(line);
 				if (this.debug) {
@@ -165,7 +173,17 @@ public class CyClone implements Callable<Void> {
 						strategy, confidence,  time);
 			}
 		};
-		detector.getClones(t_file, t_start, t_end, finder.get_visited(), listener);
+		
+		CloneSearchStatusListener statusListener = new CloneSearchStatusListener() {
+
+			@Override
+			public void notifyComplete(CloneSearch spec) {
+				System.out.println("COMPLETE");
+			}
+			
+		};
+		
+		detector.getClones(t_file, t_start, t_end, finder.get_visited(), listener, statusListener);
     	
         return null;
     }

@@ -23,3 +23,6 @@ To Make Sample CLI
 	$ java -classpath dist/CyClone.jar:test/dist/TestCC.jar cyclone.cli.CyClone -R -S src/ src/cyclone/core/cloneDetector/CloneDetectorServiceProvider.java:2:40
 
 You can add as many providers as you want by adding them to the classpath along with the actual application (the CLI or UI, here cyclone.cli.CyClone).
+
+
+NOTE! Always clean before makeing the SPI jar, or else you might leak other files into the intended destination project, which will probably result in NoSuchMethodErrors when you change something and try to use it later.
