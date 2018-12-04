@@ -64,6 +64,5 @@
 	</target>
 	
 
-	<import file="nbproject/build-impl.xml"/>
 
 </project>

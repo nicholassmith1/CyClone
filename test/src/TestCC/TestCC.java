@@ -29,56 +29,41 @@ public class TestCC  implements CloneDetectorService {
 		}
 		
 		public void run() {
-			Random rand = new Random(System.currentTimeMillis() + seed);
-			
-			/* Pick random lines from the supplied sources */
-			int file_idx = rand.nextInt(search.source_files.size());
-			Iterator<String> iter = search.source_files.iterator();
-			
-			String filename = (String)search.source_files.toArray()
-					[rand.nextInt(search.source_files.size())];
-			while (iter.hasNext()) {
-				String s = iter.next();
-				
-				if (--file_idx <= 0) {
-					filename = s;
-					break;
-				}
+			long start = System.currentTimeMillis();
+			ArrayList<String> args = new ArrayList<>();
+			args.add("java");
+			args.add("-jar");
+			args.add("/Users/stevenho/eclipse-workspace/CyClone/test/lib/simian-2.5.10.jar");
+			for(String file: search.source_files) {
+				args.add(file);
 			}
-			
-			int max_lines = 0;
-			
+			String[] arguments = new String[args.size()];
+			arguments = args.toArray(arguments);
 			try {
-				BufferedReader reader = new BufferedReader(new FileReader(filename));
-				while (reader.readLine() != null) max_lines++;
-				reader.close();
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
-			long start_line = rand.nextInt(max_lines);
-			long end_line = Long.min(max_lines, start_line
-					+ search.end_line
-					- search.start_line
-					+ (long)rand.nextInt(TestCC.MAX_ADDITIONAL_CLONE_LINES));
-			
-			long search_time = (long)(TestCC.MAX_PROCESS_TIME_S *
-					rand.nextDouble() * 1000);
-			double confidence = rand.nextFloat();
-			
-			try {
-				Thread.sleep(search_time);
-			} catch (InterruptedException e) {
+				Process ps=Runtime.getRuntime().exec(arguments);
+		        ps.waitFor();
+		        java.io.InputStream is=ps.getInputStream();
+		        byte b[]=new byte[is.available()];
+		        is.read(b,0,b.length);
+		        String output = new String(b);
+		        String[] lines = output.split("\\r?\\n");
+		        for(String line:lines) {
+		        	if(line.trim().startsWith("Between")) {
+		        		String[] clone = line.trim().split(" ");
+		        		Integer start_line = Integer.parseInt(clone[2]);
+		        		Integer end_line = Integer.parseInt(clone[4]);
+		        		String filename = clone[clone.length-1];
+		        		listener.notifyCloneDetected(search, filename,
+								start_line, end_line, 99.0,
+								"SIMIAN", System.currentTimeMillis()-start);
+		        	}
+		        }
+			} catch(Exception e) {
 				e.printStackTrace();
 			}
-			
-			listener.notifyCloneDetected(search, filename,
-					start_line, end_line, confidence,
-					"RANDOM_STRATEGY", search_time);
 		}
-	}
+				
+}
 	
 	public String[] getSupportedExtensions() {
 		final String[] supportedExtensions = { "c", "cpp", "java", "python", "xml", "h", "hpp" };
