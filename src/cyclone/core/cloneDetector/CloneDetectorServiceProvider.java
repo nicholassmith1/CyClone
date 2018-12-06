@@ -1,6 +1,9 @@
 package cyclone.core.cloneDetector;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
@@ -26,12 +29,25 @@ public class CloneDetectorServiceProvider {
 		
 		return instance;
 	}
-        
-        /* TODO - have the service providers supply this. */
-        public String[] getSupportedExtensions() {
-            String[] supported =  { "java", "c" };
+
+	public String[] getSupportedExtensions() {
+        	HashSet<String> exported = new HashSet<>();
+    		
+            try {
+                Iterator<CloneDetectorService> detectors = loader.iterator();
+                while (detectors != null && detectors.hasNext()) {
+                    CloneDetectorService d = detectors.next();
+                    
+                    exported.addAll(Arrays.asList(d.getSupportedExtensions()));
+                }
+            } catch (ServiceConfigurationError serviceError) {
+                serviceError.printStackTrace();
+            }
             
-            return supported;
+            String[] rtn = new String[exported.size()];
+            exported.toArray(rtn);
+            
+            return rtn;
         }
 	
 	public CloneSearch getClones(String target_file, long start_line,

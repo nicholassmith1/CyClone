@@ -72,12 +72,16 @@ public class CyClone implements Callable<Void> {
 		private Set<String> visited = new HashSet<String>();
 		
 		public SourceWalker() {
+			CloneDetectorServiceProvider cloneDetector = 
+					CloneDetectorServiceProvider.getInstance();
 			
-			/*
-			 * FIXME - I only support java files!
-			 */
+			String[] extensions = cloneDetector.getSupportedExtensions();
+			String glob = String.join(",", extensions);
+			
 			matcher = FileSystems.getDefault()
-                    .getPathMatcher("glob:" + "**.java");
+                    .getPathMatcher("glob:" + "**.{" + glob + "}");
+			
+			LOGGER.info("SourceWalker: " + "glob:" + "**.{" + glob + "}");
 		}
 		
 		public Set<String> get_visited() {
@@ -179,10 +183,12 @@ public class CyClone implements Callable<Void> {
 			@Override
 			public void notifyComplete(CloneSearch spec) {
 				System.out.println("COMPLETE");
+				
 			}
 			
 		};
 		
+		LOGGER.info("Beggining search: " + finder.get_visited());
 		detector.getClones(t_file, t_start, t_end, finder.get_visited(), listener, statusListener);
     	
         return null;
