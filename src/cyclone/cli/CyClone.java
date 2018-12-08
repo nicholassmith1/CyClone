@@ -4,10 +4,12 @@ import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
+import cyclone.cli.antlr.MethodExtractor;
 import cyclone.core.cloneDetector.CloneDetectorServiceProvider;
 import cyclone.core.spi.CloneListener;
 import cyclone.core.spi.CloneSearch;
@@ -42,24 +44,31 @@ public class CyClone implements Callable<Void> {
     private boolean recursive;
     
     @Option(names = {"-v", "--verbose"}, description = "verbosity")
-    private boolean verbose;
+    private boolean verbose = false;
     
+    /* FIXME - needs implementing */
     @Option(names = {"-F"}, description = "force a refresh of partial file indices")
     private boolean force_refresh;
     
     @Option(names = {"-d", "--debug"}, description = "debug")
     private boolean debug;
     
-    @Parameters(index = "0", description = "target code chunk (filename:start_line:end_line")
-    private String target;
+    @Parameters(index = "0", arity = "0..*", description = 
+    		"Specifies what code to look for code clones of. The following options are supported:\n"
+    		+ "--             Search for any clones in the source directories\n"
+    		+ "<file>         Search for the clones of every method in <file>\n"
+    		+ "<file>:<line>  Search for clones of the method that contains line number <line>\n"
+    		+ "<file>:<start_line>:<end_line>  Search for clones of the define code chunk\n"
+    		)
+    private String target = null;
+
     
-    
-    private String work_dir = "/tmp/rawData/";
-    private String top_work_dir = "/tmp/"; // anything other than partial index files in "/tmp/rawData" causes crashes
-    
-    private final static Logger LOGGER = Logger.getLogger(CyClone.class.getName());
+    private final static Logger LOGGER = Logger.getLogger("CyClone");
     static {
     	LOGGER.setLevel(Level.OFF);
+    	ConsoleHandler handler = new ConsoleHandler();
+        handler.setLevel(Level.OFF);
+        LOGGER.addHandler(handler);
     }
     
     public static void main(String[] args) throws Exception {
@@ -99,29 +108,54 @@ public class CyClone implements Callable<Void> {
 			/* Marked as visited */
 			visited.add(file.toAbsolutePath().normalize().toString());
 			
-			/* Add partial index of all interesting files to the working directory */
-			LOGGER.fine("generating partial index for "
-					+ file.toAbsolutePath().toString());
-			
 			return CONTINUE;
 		}
 	}
-    
-    @Override
-    public Void call() throws Exception {
-    	String t_file;
-    	int t_start;
-    	int t_end;
-    	
-    	String[] tgt_strings = target.split(":");
-    	if (tgt_strings.length == 3) {
-    		t_file = tgt_strings[0];
-    		t_start = Integer.parseInt(tgt_strings[1]);
-    		t_end = Integer.parseInt(tgt_strings[2]);
-    	} else {
-    		throw new Exception("not supported");
+	
+	/**
+	 * Get all the files in the search space that SPI modules are
+	 * capable of processing.
+	 * @return
+	 * @throws IOException
+	 */
+	private Set<String> getSearchSources() throws IOException {
+		SourceWalker finder = new SourceWalker();
+		Set<FileVisitOption> options = new HashSet<FileVisitOption>();
+		int depth;
+		
+		if (this.recursive) {
+			depth = Integer.MAX_VALUE;
+		} else {
+			depth = 1;
 		}
-    	
+		
+		/* Generate partial indices for source files */
+		for (String s : this.src_dir) {			
+	        Files.walkFileTree(Paths.get(s), options, depth, finder);
+		}
+		
+		return finder.get_visited();
+	}
+	
+	private void searchAllMethods(String t_file) throws IOException {
+		MethodExtractor methodExtractor = MethodExtractor.getInstance();
+		int t_start;
+		int t_end;
+		
+		Map<String, String> methods =
+				methodExtractor.getMethods(t_file);
+		
+		for (String m : methods.keySet()) {
+			String[] lines = m.split(",");
+			t_start = Integer.parseInt(lines[0]);
+			t_end = Integer.parseInt(lines[1]);
+			
+			searchSingle(t_file, t_start, t_end);
+		}
+	}
+	
+	private void searchSingle(String t_file, int t_start, int t_end) throws IOException {
+
     	/* Sterilize path, always work in absolutes */
     	t_file = new File(t_file).toPath().toAbsolutePath().normalize().toString();
     	
@@ -148,20 +182,7 @@ public class CyClone implements Callable<Void> {
 		 * Generate or update the partial indices for all the files on the
 		 * search path.
 		 */
-		SourceWalker finder = new SourceWalker();
-		Set<FileVisitOption> options = new HashSet<FileVisitOption>();
-		int depth;
-		
-		if (this.recursive) {
-			depth = Integer.MAX_VALUE;
-		} else {
-			depth = 1;
-		}
-		
-		/* Generate partial indices for source files */
-		for (String s : this.src_dir) {			
-	        Files.walkFileTree(Paths.get(s), options, depth, finder);
-		}
+		Set<String> searchSources = getSearchSources();
 		
 		CloneDetectorServiceProvider detector;
 		detector = CloneDetectorServiceProvider.getInstance();
@@ -171,8 +192,9 @@ public class CyClone implements Callable<Void> {
 			public void notifyCloneDetected(CloneSearch search,
 					String clone_file, long start_line, long end_line,
 					double confidence, String strategy, long time) {
-				System.out.printf("Discovered %s:%d:%d, strategy=%s "
+				System.out.printf("Discovered %s:%d:%d <-->%s:%d:%d, strategy=%s "
 						+ "confidence=%.2f time=%d ms\n",
+						search.target_file, search.start_line, search.end_line,
 						clone_file, start_line, end_line,
 						strategy, confidence,  time);
 			}
@@ -188,9 +210,86 @@ public class CyClone implements Callable<Void> {
 			
 		};
 		
-		LOGGER.info("Beggining search: " + finder.get_visited());
-		detector.getClones(t_file, t_start, t_end, finder.get_visited(), listener, statusListener);
+		LOGGER.info("Beggining Search: target=" + t_file + ":" + t_start +
+				"," + t_end + " sources=" + searchSources);
+		detector.getClones(t_file, t_start, t_end, searchSources, listener, statusListener);
+	}
+    
+    @Override
+    public Void call() throws Exception {
+    	MethodExtractor methodExtractor = MethodExtractor.getInstance();
+    	String t_file;
+    	int t_line;
+    	int t_start;
+    	int t_end;
     	
+    	if (debug) {
+    		LOGGER.setLevel(Level.FINEST);
+    	}
+    	
+    	/* Determine run mode.
+    	 * -  The reserved value "--" is used
+    	 * -  No lines are specified: Search all methods
+    	 * -  If there is only one line, get the start and end lines
+    	 *    for a method containing that line.
+    	 * -  If there are two lines, use those as the search bounds.
+    	 */
+    	if (target == null) {
+    		/* Search everything */
+    		Set<String> searchSources = getSearchSources();
+    		
+    		for (String f : searchSources) {
+    			searchAllMethods(f);
+    		}
+    	} else {
+    		String[] tgt_strings = target.split(":");
+
+    		if (tgt_strings.length == 1) {
+    			/* Search every method in the file */
+    			
+    			t_file = tgt_strings[0];
+    			searchAllMethods(t_file);
+    		} else if (tgt_strings.length == 2) {
+    			/* Search for a code chunk around the specified line */
+    			
+    			boolean found = false;
+    			t_file = tgt_strings[0];
+        		t_line = Integer.parseInt(tgt_strings[1]);
+    			
+    			Map<String, String> methods =
+    					methodExtractor.getMethods(t_file);
+    			
+    			for (String m : methods.keySet()) {
+    				String[] lines = m.split(",");
+    				t_start = Integer.parseInt(lines[0]);
+    				t_end = Integer.parseInt(lines[1]);
+    				if ((t_line >= t_start) && (t_line <= t_end)) {
+    					searchSingle(t_file, t_start, t_end);
+    					found = true;
+    					break;
+    				}
+    			}
+    			
+    			/* Report errors */
+    			if (!found) {
+    				System.out.println("Unable to find code chunk for " +
+    						t_file + ":" + t_line);
+    				System.exit(1);
+    			}
+        	} else if (tgt_strings.length == 3) {
+        		/* Search for a single fully bounded chunk */
+        		
+        		t_file = tgt_strings[0];
+        		t_start = Integer.parseInt(tgt_strings[1]);
+        		t_end = Integer.parseInt(tgt_strings[2]);
+        		searchSingle(t_file, t_start, t_end);
+        	}
+        	else {
+        		System.out.println("Invalid option \"" + target + "\"");
+        		System.exit(1);;
+    		}
+    	}
+
         return null;
     }
 }

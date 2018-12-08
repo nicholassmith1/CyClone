@@ -44,7 +44,7 @@
 				destdir="${classes.dir}">
 			<include name="cyclone/core/spi/*.java" />
 			<include name="cyclone/core/cloneDetector/*.java" />
-			<include name="cyclone/cli/*.java" />
+			<include name="cyclone/cli/**/*.java" />
 			<classpath>
 				<fileset dir="${lib}">
 					<include name="**/*.jar" />
