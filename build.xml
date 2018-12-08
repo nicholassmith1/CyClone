@@ -55,12 +55,39 @@
 	
 	<target name="jar_cli" depends="compile_cli">
 		<mkdir dir="${jar.dir}"/>
-		<jar destfile="${jar.dir}/CyClone.jar" basedir="${classes.dir}">
+		<jar destfile="${jar.dir}/CyCloneBase.jar" basedir="${classes.dir}">
 			<zipgroupfileset dir="${lib}" includes="**/*.jar" />
 			<manifest>
 				<attribute name="Main-Class" value="cyclone.cli.CyClone"/>
 			</manifest>
 		</jar>
+	</target>
+	
+	<target name="jar_cli_full" depends="compile_cli">
+		<mkdir dir="${jar.dir}"/>
+		<jar destfile="${jar.dir}/CyClone.jar" basedir="${classes.dir}" duplicate="preserve">
+			<zipgroupfileset dir="${lib}" includes="**/*.jar" />
+			<zipgroupfileset dir="modules" includes="**/*.jar" />
+			<manifest>
+				<attribute name="Main-Class" value="cyclone.cli.CyClone"/>
+			</manifest>
+		</jar>
+		
+		<!-- specify with modules to use -->
+		<echo file="META-INF/services/cyclone.core.spi.CloneDetectorService">cycloneLucene.CyCloneLucene
+sourcerercc.SourcererCC
+TestCC.TestCC
+		</echo>
+		<!--
+		<jar destfile="${jar.dir}/CyClone.jar" basedir="${classes.dir}" update="true">
+			<fileset file="build/META-INF/services/cyclone.core.spi.CloneDetectorService"/>
+		</jar>
+			-->
+		<zip destfile="${jar.dir}/CyClone.jar" update="true">
+			<fileset dir="./">
+				<include name="META-INF/services/cyclone.core.spi.CloneDetectorService"/>
+				</fileset>
+		</zip>
 	</target>
 	
 
