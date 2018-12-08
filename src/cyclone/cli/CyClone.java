@@ -130,7 +130,10 @@ public class CyClone implements Callable<Void> {
 		}
 		
 		/* Generate partial indices for source files */
-		for (String s : this.src_dir) {			
+		for (String s : this.src_dir) {
+			/* ignore files and directories that don't exist */
+			if (!new File(s).exists())
+				continue;
 	        Files.walkFileTree(Paths.get(s), options, depth, finder);
 		}
 		
@@ -204,7 +207,7 @@ public class CyClone implements Callable<Void> {
 
 			@Override
 			public void notifyComplete(CloneSearch spec) {
-				System.out.println("COMPLETE");
+//				System.out.println("COMPLETE");
 				
 			}
 			
