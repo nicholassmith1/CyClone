@@ -76,7 +76,6 @@
 		<!-- specify with modules to use -->
 		<echo file="META-INF/services/cyclone.core.spi.CloneDetectorService">cycloneLucene.CyCloneLucene
 sourcerercc.SourcererCC
-TestCC.TestCC
 		</echo>
 		<!--
 		<jar destfile="${jar.dir}/CyClone.jar" basedir="${classes.dir}" update="true">
